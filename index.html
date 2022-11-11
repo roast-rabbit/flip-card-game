@@ -4,11 +4,21 @@
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="style.css" />
     <title>Document</title>
   </head>
   <body>
     <div class="emoji_card_list pages game_content">
+      <div id="game-stats">
+        <div id="time-remaining">time remaining: <span></span></div>
+        <div id="current-level">LEVEL: <span></span></div>
+      </div>
       <section class="game__cards js-cards">
+        <div id="message">
+          <p id="message-info"></p>
+          <button id="action-btn">action-btn😘</button>
+        </div>
+        <div id="overlay"></div>
         <div class="game__card js-card" data-animal="dog" style="order: 5">
           <div class="game__back-card">
             <i class="emoji_font">🙈</i>
@@ -182,7 +192,13 @@
           align-items: center;
           justify-content: center;
         }
+        #game-stats {
+          display: flex;
+          padding: 1rem;
+          gap: 2rem;
+        }
         .game__cards {
+          position: relative;
           width: 100%;
           margin: auto;
           display: grid;
@@ -192,6 +208,9 @@
           padding: 0.5rem;
         }
         .game__cards.no-event {
+          pointer-events: none;
+        }
+        .game__card.no-event {
           pointer-events: none;
         }
         .game__card {
@@ -245,21 +264,85 @@
           -webkit-transform: rotateY(180deg);
           transform: rotateY(180deg);
         }
+        #message {
+          font-size: 2rem;
+          width: 60%;
+          background-color: #333;
+          color: #ddd;
+          opacity: 90%;
+          padding: 2rem;
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          border-radius: 10px;
+          display: none;
+          z-index: 10;
+        }
+        #message.shown {
+          display: block;
+        }
+        #message #action-btn {
+          cursor: pointer;
+          background-color: #ccc;
+          border-radius: 10px;
+          font-size: 4vmin;
+          padding: 2vmin;
+        }
+
+        #overlay {
+          position: absolute;
+          z-index: 5;
+          opacity: 90%;
+          background-color: rgba(0, 0, 0, 0.5);
+          top: 0;
+          left: 0;
+          bottom: 0;
+          right: 0;
+          display: none;
+        }
+        #overlay.shown {
+          display: block;
+        }
       </style>
       <script type="text/javascript">
         class MemoryGame {
+          // Time in second
+          #time = 300;
+
+          #level = 1;
           constructor() {
             this.duration = 1000;
             this.cardsContainer = document.querySelector(".js-cards");
-            this.cards = Array.from(this.cardsContainer.children);
+            this.cards = Array.from(
+              document.querySelectorAll(".game__card.js-card")
+            );
+            this.timeRemaining = document.querySelector("#time-remaining span");
+            this.currentLevel = document.querySelector("#current-level span");
+            this.finalMatchings = document.querySelector(
+              "#lose-message p span"
+            );
+            this.message = document.querySelector("#message");
+            this.overlay = document.querySelector("#overlay");
+            this.actionBtn = document.querySelector("#action-btn");
+            this.messageInfo = document.querySelector("#message-info");
+          }
+
+          init() {
             this.shuffleCards();
+            this.cards.forEach((card) => {
+              card.classList.remove("flipped");
+            });
+            this.message.classList.remove("shown");
+            this.overlay.classList.remove("shown");
+            this.currentLevel.textContent = this.#level;
+            this.timer = this.startTimer();
           }
 
           shuffleCards() {
             this.cards.forEach((card) => {
               const randomNumber =
                 Math.floor(Math.random() * this.cards.length) + 1;
-              console.log(randomNumber);
               card.classList.remove("has-match");
 
               setTimeout(() => {
@@ -273,7 +356,16 @@
               this.cards.every((card) => card.classList.contains("has-match"))
             ) {
               setTimeout(() => {
-                this.shuffleCards();
+                this.#level++;
+                this.message.classList.add("shown");
+                this.overlay.classList.add("shown");
+                this.messageInfo.textContent = `Enter level ${this.#level}`;
+                this.actionBtn.textContent = "start";
+                clearInterval(this.timer);
+                this.#time += 60;
+                this.actionBtn.addEventListener("click", () => {
+                  this.init();
+                });
               }, this.duration);
             }
           }
@@ -293,6 +385,8 @@
 
               firstCard.classList.add("has-match");
               secondCard.classList.add("has-match");
+              // this.#machingPairs++;
+              // this.currentMatchings.textContent = this.#machingPairs;
 
               this.checkAllCards();
             } else {
@@ -315,13 +409,46 @@
               this.checkIfMatched(flippedCards[0], flippedCards[1]);
             }
           }
+
+          startTimer() {
+            const tick = () => {
+              const min = String(Math.trunc(this.#time / 60)).padStart(2, 0);
+              const sec = String(this.#time % 60).padStart(2, 0);
+
+              //In each call, print the remaining time to UI
+              this.timeRemaining.textContent = `${min}:${sec}`;
+              // When 0 seconds, stop timer and end game
+              if (this.#time === 0) {
+                clearInterval(timer);
+                setTimeout(() => {
+                  this.timeRemaining.textContent = `GAME OVER`;
+
+                  this.message.classList.add("shown");
+                  this.overlay.classList.add("shown");
+                  this.messageInfo.textContent = "Time out";
+                  this.actionBtn.textContent = "restart game";
+                  this.actionBtn.addEventListener("click", startGame);
+                }, 1000);
+              }
+              this.#time--;
+            };
+
+            tick();
+            const timer = setInterval(tick, 1000);
+            return timer;
+          }
+        }
+        let game;
+        function startGame() {
+          game = new MemoryGame();
+          game.init();
+
+          Array.from(document.querySelectorAll(".js-card")).forEach((card) => {
+            card.addEventListener("click", game.flip.bind(game, card));
+          });
         }
 
-        const game = new MemoryGame();
-
-        Array.from(document.querySelectorAll(".js-card")).forEach((card) => {
-          card.addEventListener("click", game.flip.bind(game, card));
-        });
+        startGame();
       </script>
     </div>
   </body>
