@@ -310,7 +310,7 @@
       <script type="text/javascript">
         class MemoryGame {
           // Time in second
-          #time = 200;
+          #time = 180;
 
           #level = 1;
           constructor() {
@@ -338,6 +338,7 @@
             this.message.classList.remove("shown");
             this.overlay.classList.remove("shown");
             this.currentLevel.textContent = this.#level;
+            clearInterval(this.timer);
             this.timer = this.startTimer();
           }
 
@@ -421,7 +422,7 @@
               this.timeRemaining.textContent = `${min}:${sec}`;
               // When 0 seconds, stop timer and end game
               if (this.#time === 0) {
-                clearInterval(timer);
+                clearInterval(this.timer);
                 setTimeout(() => {
                   this.timeRemaining.textContent = `GAME OVER`;
 
@@ -429,20 +430,30 @@
                   this.overlay.classList.add("shown");
                   this.messageInfo.textContent = "Time out";
                   this.actionBtn.textContent = "restart game";
+
                   this.actionBtn.addEventListener("click", startGame);
                 }, 1000);
+              } else {
+                this.#time > 0 && this.#time--;
               }
-              this.#time--;
             };
 
-            tick();
+            this.#time > 0 && tick();
             const timer = setInterval(tick, 1000);
+            timers.push(timer);
             return timer;
           }
         }
+        const timers = [];
         let game;
         function startGame() {
+          console.log(`before clearing timer: ${timers}`);
+          timers.forEach((timer) => {
+            clearInterval(timer);
+          });
+          console.log(`After clearing timer ${timers}`);
           game = new MemoryGame();
+          console.log(game);
           game.init();
 
           Array.from(document.querySelectorAll(".js-card")).forEach((card) => {
